@@ -1,0 +1,27 @@
+<%- |
+String $ca_name,
+String $db_dir,
+String $db_file,
+String $ca_key,
+String $ca_cert,
+| -%>
+
+[ <%= $ca_name %> ]
+certificate    = <%= $ca_cert %>
+private_key    = <%= $ca_key %>
+
+new_certs_dir  = <%= $db_dir %>
+database       = <%= $db_file %>
+serial         = <%= $db_dir %>/serial.txt
+default_md     = sha256
+policy         = policy_anything
+unique_subject = no
+
+[ policy_anything ]
+countryName             = optional
+stateOrProvinceName     = optional
+localityName            = optional
+organizationName        = optional
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional

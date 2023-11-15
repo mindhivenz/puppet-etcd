@@ -1,0 +1,33 @@
+<%- |
+String $token,
+String $ip,
+String $hostname,
+Array[String] $member_hostnames,
+Integer $peer_port,
+Integer $client_port,
+Stdlib::Absolutepath $data_dir,
+String $ca_cert,
+String $server_cert,
+String $server_key,
+| -%>
+
+ETCD_NAME="<%= $hostname %>"
+ETCD_INITIAL_CLUSTER_STATE="new"
+ETCD_DATA_DIR="<%= $data_dir %>"
+ETCD_INITIAL_CLUSTER_TOKEN="<%= $token %>"
+
+ETCD_INITIAL_CLUSTER="<%= join($member_hostnames.map | $name | { "$name=https://$name:$peer_port" }, ',') %>"
+
+ETCD_LISTEN_PEER_URLS="https://<%= $ip %>:<%= $peer_port %>"
+ETCD_LISTEN_CLIENT_URLS="https://<%= $ip %>:<%= $client_port %>"
+
+ETCD_INITIAL_ADVERTISE_PEER_URLS="https://<%= $hostname %>:<%= $peer_port %>"
+ETCD_ADVERTISE_CLIENT_URLS="https://<%= $hostname %>:<%= $client_port %>"
+
+ETCD_TRUSTED_CA_FILE="<%= $ca_cert %>"
+ETCD_CERT_FILE="<%= $server_cert %>"
+ETCD_KEY_FILE="<%= $server_key %>"
+
+ETCD_PEER_TRUSTED_CA_FILE="<%= $ca_cert %>"
+ETCD_PEER_CERT_FILE="<%= $server_cert %>"
+ETCD_PEER_KEY_FILE="<%= $server_key %>"

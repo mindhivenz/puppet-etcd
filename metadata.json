@@ -5,6 +5,8 @@
   "summary": "etcd server and client",
   "license": "MIT",
   "source": "https://github.com/mindhivenz/puppet-etcd",
+  "project_page": "https://github.com/mindhivenz/puppet-etcd",
+  "issues_url": "https://github.com/mindhivenz/puppet-etcd/issues",
   "dependencies": [
     {
       "name": "stm/openssl",

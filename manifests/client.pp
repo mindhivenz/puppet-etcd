@@ -1,8 +1,10 @@
 class etcd::client (
-  Enum[present, absent, latest] $ensure = 'present',
+  Enum[present, absent, latest] $ensure = present,
 ) {
 
   include etcd
+
+  $etcdctl_path = "$etcd::bin_dir/etcdctl"
 
   if $ensure != absent {
 
@@ -12,7 +14,7 @@ class etcd::client (
     $upgrade = $ensure == latest
 
     Class[etcd::download]
-    -> file { "$etcd::bin_dir/etcdctl":
+    -> file { $etcdctl_path:
       ensure  => file,
       source  => "$etcd::download::extract_path/etcdctl",
       owner   => 'root',
@@ -23,7 +25,7 @@ class etcd::client (
 
   } else {
 
-    file { "$etcd::bin_dir/etcdctl":
+    file { $etcdctl_path:
       ensure => absent,
     }
 

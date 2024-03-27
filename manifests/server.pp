@@ -9,14 +9,13 @@ class etcd::server (
 
   if $ensure != absent {
 
-    include etcd::download
-    include etcd::ca
-    include etcd::server_cert
+    require etcd::download
+    require etcd::ca
+    require etcd::server_cert
 
     $upgrade = $ensure == latest
 
-    Class[etcd::download]
-    -> file { "$etcd::bin_dir/etcd":
+    file { "$etcd::bin_dir/etcd":
       ensure  => file,
       source  => "$etcd::download::extract_path/etcd",
       owner   => 'root',
@@ -35,16 +34,16 @@ class etcd::server (
     -> file { "$etcd::conf_dir/etcd.conf":
       ensure  => file,
       content => epp('etcd/etcd.conf.epp', {
-        token            => $token,
-        ip               => $networking[ip],
-        hostname         => $etcd::local_hostname,
-        member_hostnames => $etcd::member_hostnames,
-        peer_port        => $peer_port,
-        client_port      => $etcd::client_port,
-        data_dir         => $data_dir,
-        ca_cert          => $etcd::ca::cert_file,
-        server_cert      => $etcd::server_cert::cert_file,
-        server_key       => $etcd::server_cert::key_file,
+        token                    => $token,
+        ip                       => $networking[ip],
+        hostname                 => $etcd::local_hostname,
+        initial_member_hostnames => $etcd::initial_member_hostnames,
+        peer_port                => $peer_port,
+        client_port              => $etcd::client_port,
+        data_dir                 => $data_dir,
+        ca_cert                  => $etcd::ca::cert_file,
+        server_cert              => $etcd::server_cert::cert_file,
+        server_key               => $etcd::server_cert::key_file,
       }),
       owner   => $etcd::user,
       group   => $etcd::group,
@@ -59,7 +58,28 @@ class etcd::server (
       }),
       enable    => true,
       active    => true,
-      subscribe => [Class[etcd::server_cert], File["$etcd::bin_dir/etcd"], File["$etcd::conf_dir/etcd.conf"]],
+      subscribe => [File["$etcd::bin_dir/etcd"], File["$etcd::conf_dir/etcd.conf"]],
+    }
+
+    if $etcd::local_hostname in $etcd::added_member_hostnames {
+      require etcd::client
+
+      exec { 'etcd-join-existing-cluster':
+        command => join(
+          [
+            "$etcd::client::etcdctl_path member add $etcd::local_hostname",
+            "--peer-urls=https://$etcd::local_hostname:$peer_port",
+            "--cacert=$etcd::ca::cert_file",
+            "--cert=$etcd::server_cert::cert_file",
+            "--key=$etcd::server_cert::key_file",
+            "--endpoints=$etcd::cluster_endpoint",
+          ],
+          ' '
+        ),
+        creates => "$data_dir/member",
+        require => File[$data_dir],
+        before  => Systemd::Unit_file['etcd.service'],
+      }
     }
 
   } else {

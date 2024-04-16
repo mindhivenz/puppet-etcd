@@ -1,5 +1,11 @@
 # Changelog
 
+## Release 2.0.1
+
+### Bug fix
+
+- `ETCD_INITIAL_CLUSTER` needs to include `etcd::added_member_hostnames`
+  
 ## Release 2.0.0
   
 ### Breaking changes

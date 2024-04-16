@@ -2,7 +2,8 @@
 String $token,
 String $ip,
 String $hostname,
-Array[String] $initial_member_hostnames,
+String $cluster_state,
+Array[String] $cluster_member_hostnames,
 Integer $peer_port,
 Integer $client_port,
 Stdlib::Absolutepath $data_dir,
@@ -12,11 +13,11 @@ String $server_key,
 | -%>
 
 ETCD_NAME="<%= $hostname %>"
-ETCD_INITIAL_CLUSTER_STATE="<%= if $hostname in $initial_member_hostnames { 'new' } else { 'existing' } %>"
+ETCD_INITIAL_CLUSTER_STATE="<%= $cluster_state %>"
 ETCD_DATA_DIR="<%= $data_dir %>"
 ETCD_INITIAL_CLUSTER_TOKEN="<%= $token %>"
 
-ETCD_INITIAL_CLUSTER="<%= join($initial_member_hostnames.map | $name | { "$name=https://$name:$peer_port" }, ',') %>"
+ETCD_INITIAL_CLUSTER="<%= join($cluster_member_hostnames.map | $name | { "$name=https://$name:$peer_port" }, ',') %>"
 
 ETCD_LISTEN_PEER_URLS="https://<%= $ip %>:<%= $peer_port %>"
 ETCD_LISTEN_CLIENT_URLS="https://<%= $ip %>:<%= $client_port %>"

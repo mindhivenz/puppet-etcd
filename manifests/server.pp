@@ -14,6 +14,7 @@ class etcd::server (
     require etcd::server_cert
 
     $upgrade = $ensure == latest
+    $cluster_state = if $etcd::local_hostname in $etcd::initial_member_hostnames { 'new' } else { 'existing' }
 
     file { "$etcd::bin_dir/etcd":
       ensure  => file,
@@ -37,7 +38,8 @@ class etcd::server (
         token                    => $token,
         ip                       => $networking[ip],
         hostname                 => $etcd::local_hostname,
-        initial_member_hostnames => $etcd::initial_member_hostnames,
+        cluster_state            => $cluster_state,
+        cluster_member_hostnames => $etcd::member_hostnames,
         peer_port                => $peer_port,
         client_port              => $etcd::client_port,
         data_dir                 => $data_dir,

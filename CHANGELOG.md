@@ -1,5 +1,11 @@
 # Changelog
 
+## Release 2.1.0
+
+### New features
+
+- Set environment vars for `etcdctl` in `.bashrc`
+
 ## Release 2.0.1
 
 ### Bug fix

@@ -82,6 +82,28 @@ class etcd::server (
         require => File[$data_dir],
         before  => Systemd::Unit_file['etcd.service'],
       }
+
+      file_line { 'etcd-env-cacert':
+        path  => '/root/.bashrc',
+        line  => "export ETCDCTL_CACERT=$etcd::ca::cert_file",
+        match => "^export ETCDCTL_CACERT=",
+      }
+      file_line { 'etcd-env-cert':
+        path  => '/root/.bashrc',
+        line  => "export ETCDCTL_CERT=$etcd::server_cert::cert_file",
+        match => "^export ETCDCTL_CERT=",
+      }
+      file_line { 'etcd-env-key':
+        path  => '/root/.bashrc',
+        line  => "export ETCDCTL_KEY=$etcd::server_cert::key_file",
+        match => "^export ETCDCTL_KEY=",
+      }
+      file_line { 'etcd-env-endpoints':
+        path  => '/root/.bashrc',
+        line  => "export ETCDCTL_ENDPOINTS=$etcd::cluster_endpoint",
+        match => "^export ETCDCTL_ENDPOINTS=",
+      }
+
     }
 
   } else {

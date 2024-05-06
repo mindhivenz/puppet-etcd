@@ -12,6 +12,7 @@ class etcd::server (
     require etcd::download
     require etcd::ca
     require etcd::server_cert
+    require etcd::client
 
     $upgrade = $ensure == latest
     $cluster_state = if $etcd::local_hostname in $etcd::initial_member_hostnames { 'new' } else { 'existing' }
@@ -63,9 +64,28 @@ class etcd::server (
       subscribe => [File["$etcd::bin_dir/etcd"], File["$etcd::conf_dir/etcd.conf"]],
     }
 
-    if $etcd::local_hostname in $etcd::added_member_hostnames {
-      require etcd::client
+    file_line { 'etcd-env-cacert':
+      path  => '/root/.bashrc',
+      line  => "export ETCDCTL_CACERT=$etcd::ca::cert_file",
+      match => "^export ETCDCTL_CACERT=",
+    }
+    file_line { 'etcd-env-cert':
+      path  => '/root/.bashrc',
+      line  => "export ETCDCTL_CERT=$etcd::server_cert::cert_file",
+      match => "^export ETCDCTL_CERT=",
+    }
+    file_line { 'etcd-env-key':
+      path  => '/root/.bashrc',
+      line  => "export ETCDCTL_KEY=$etcd::server_cert::key_file",
+      match => "^export ETCDCTL_KEY=",
+    }
+    file_line { 'etcd-env-endpoints':
+      path  => '/root/.bashrc',
+      line  => "export ETCDCTL_ENDPOINTS=$etcd::cluster_endpoint",
+      match => "^export ETCDCTL_ENDPOINTS=",
+    }
 
+    if $etcd::local_hostname in $etcd::added_member_hostnames {
       exec { 'etcd-join-existing-cluster':
         command => join(
           [
@@ -82,28 +102,6 @@ class etcd::server (
         require => File[$data_dir],
         before  => Systemd::Unit_file['etcd.service'],
       }
-
-      file_line { 'etcd-env-cacert':
-        path  => '/root/.bashrc',
-        line  => "export ETCDCTL_CACERT=$etcd::ca::cert_file",
-        match => "^export ETCDCTL_CACERT=",
-      }
-      file_line { 'etcd-env-cert':
-        path  => '/root/.bashrc',
-        line  => "export ETCDCTL_CERT=$etcd::server_cert::cert_file",
-        match => "^export ETCDCTL_CERT=",
-      }
-      file_line { 'etcd-env-key':
-        path  => '/root/.bashrc',
-        line  => "export ETCDCTL_KEY=$etcd::server_cert::key_file",
-        match => "^export ETCDCTL_KEY=",
-      }
-      file_line { 'etcd-env-endpoints':
-        path  => '/root/.bashrc',
-        line  => "export ETCDCTL_ENDPOINTS=$etcd::cluster_endpoint",
-        match => "^export ETCDCTL_ENDPOINTS=",
-      }
-
     }
 
   } else {

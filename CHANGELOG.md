@@ -1,5 +1,11 @@
 # Changelog
 
+## Release 2.1.1
+
+### Bug Fix
+
+- Apply .bashrc in correct place
+
 ## Release 2.1.0
 
 ### New features

@@ -1,7 +1,7 @@
 class etcd (
   String $version, # e.g. 3.5.0, user forced to specify
   String $local_hostname                  = $facts[networking][hostname],
-  # Changing this will not add or remove members from cluster after initialization
+  # Changing initial_member_hostnames will not add or remove members from cluster after initialization
   Array[String] $initial_member_hostnames = [$local_hostname],
   Array[String] $added_member_hostnames   = [],
   Stdlib::Absolutepath $conf_dir          = '/etc/etcd',

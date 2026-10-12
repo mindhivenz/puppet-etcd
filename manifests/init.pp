@@ -10,9 +10,8 @@ class etcd (
   String $group                           = 'etcd',
   Integer $client_port                    = 2379,
 ) {
-
   $member_hostnames = $initial_member_hostnames + $added_member_hostnames
-  $cluster_endpoint = join($member_hostnames.map | $name | { "https://$name:$client_port" }, ',')
+  $cluster_endpoint = join($member_hostnames.map | $name | { "https://${name}:${client_port}" }, ',')
   $is_member = $local_hostname in $member_hostnames
 
   user { $user:
@@ -29,5 +28,4 @@ class etcd (
     group  => $group,
     mode   => '0755',
   }
-
 }

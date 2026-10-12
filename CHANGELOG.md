@@ -1,5 +1,26 @@
 # Changelog
 
+## Release 2.2.0
+
+### Bug fixes
+
+- `etcd::server` with `ensure => absent` now stops and disables `etcd.service` before removing the
+  binary, configuration, unit file and data directory
+- `etcd::server` with `ensure => absent` now removes the `ETCDCTL_*` lines from root's `.bashrc`
+- The `etcd.service` unit runs as `etcd::user` instead of always as `etcd`
+
+### Other changes
+
+- Declare the `puppet/archive` dependency, which `etcd::download` already used
+- Require Puppet `>= 7.0.0 < 9.0.0` and support Ubuntu 20.04, 22.04 and 24.04
+- Converted from PDK to jig, with VoxBox CI and full spec coverage
+
+## Release 2.1.2
+
+### Other changes
+
+- Allow `puppet/systemd` up to `< 9.0.0`
+
 ## Release 2.1.1
 
 ### Bug Fix

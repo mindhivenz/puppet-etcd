@@ -4,11 +4,9 @@ class etcd::server (
   Stdlib::Absolutepath $data_dir        = '/var/lib/etcd',
   Integer $peer_port                    = 2380,
 ) {
-
   include etcd
 
   if $ensure != absent {
-
     require etcd::download
     require etcd::ca
     require etcd::server_cert
@@ -17,9 +15,9 @@ class etcd::server (
     $upgrade = $ensure == latest
     $cluster_state = if $etcd::local_hostname in $etcd::initial_member_hostnames { 'new' } else { 'existing' }
 
-    file { "$etcd::bin_dir/etcd":
+    file { "${etcd::bin_dir}/etcd":
       ensure  => file,
-      source  => "$etcd::download::extract_path/etcd",
+      source  => "${etcd::download::extract_path}/etcd",
       owner   => 'root',
       group   => 'root',
       mode    => '0755',
@@ -33,11 +31,11 @@ class etcd::server (
       group  => $etcd::group,
       mode   => '0700',
     }
-    -> file { "$etcd::conf_dir/etcd.conf":
+    -> file { "${etcd::conf_dir}/etcd.conf":
       ensure  => file,
       content => epp('etcd/etcd.conf.epp', {
         token                    => $token,
-        ip                       => $networking[ip],
+        ip                       => $facts['networking']['ip'],
         hostname                 => $etcd::local_hostname,
         cluster_state            => $cluster_state,
         cluster_member_hostnames => $etcd::member_hostnames,
@@ -56,70 +54,73 @@ class etcd::server (
 
     systemd::unit_file { 'etcd.service':
       content   => epp('etcd/etcd.service.epp', {
-        exe_file  => "$etcd::bin_dir/etcd",
-        conf_file => "$etcd::conf_dir/etcd.conf",
+        user      => $etcd::user,
+        exe_file  => "${etcd::bin_dir}/etcd",
+        conf_file => "${etcd::conf_dir}/etcd.conf",
       }),
       enable    => true,
       active    => true,
-      subscribe => [File["$etcd::bin_dir/etcd"], File["$etcd::conf_dir/etcd.conf"]],
+      subscribe => [File["${etcd::bin_dir}/etcd"], File["${etcd::conf_dir}/etcd.conf"]],
     }
 
-    file_line { 'etcd-env-cacert':
-      path  => '/root/.bashrc',
-      line  => "export ETCDCTL_CACERT=$etcd::ca::cert_file",
-      match => "^export ETCDCTL_CACERT=",
+    $etcdctl_env = {
+      'CACERT'    => $etcd::ca::cert_file,
+      'CERT'      => $etcd::server_cert::cert_file,
+      'KEY'       => $etcd::server_cert::key_file,
+      'ENDPOINTS' => $etcd::cluster_endpoint,
     }
-    file_line { 'etcd-env-cert':
-      path  => '/root/.bashrc',
-      line  => "export ETCDCTL_CERT=$etcd::server_cert::cert_file",
-      match => "^export ETCDCTL_CERT=",
-    }
-    file_line { 'etcd-env-key':
-      path  => '/root/.bashrc',
-      line  => "export ETCDCTL_KEY=$etcd::server_cert::key_file",
-      match => "^export ETCDCTL_KEY=",
-    }
-    file_line { 'etcd-env-endpoints':
-      path  => '/root/.bashrc',
-      line  => "export ETCDCTL_ENDPOINTS=$etcd::cluster_endpoint",
-      match => "^export ETCDCTL_ENDPOINTS=",
+    $etcdctl_env.each |$variable, $value| {
+      file_line { "etcd-env-${downcase($variable)}":
+        path  => '/root/.bashrc',
+        line  => "export ETCDCTL_${variable}=${value}",
+        match => "^export ETCDCTL_${variable}=",
+      }
     }
 
     if $etcd::local_hostname in $etcd::added_member_hostnames {
       exec { 'etcd-join-existing-cluster':
         command => join(
           [
-            "$etcd::client::etcdctl_path member add $etcd::local_hostname",
-            "--peer-urls=https://$etcd::local_hostname:$peer_port",
-            "--cacert=$etcd::ca::cert_file",
-            "--cert=$etcd::server_cert::cert_file",
-            "--key=$etcd::server_cert::key_file",
-            "--endpoints=$etcd::cluster_endpoint",
+            "${etcd::client::etcdctl_path} member add ${etcd::local_hostname}",
+            "--peer-urls=https://${etcd::local_hostname}:${peer_port}",
+            "--cacert=${etcd::ca::cert_file}",
+            "--cert=${etcd::server_cert::cert_file}",
+            "--key=${etcd::server_cert::key_file}",
+            "--endpoints=${etcd::cluster_endpoint}",
           ],
           ' '
         ),
-        creates => "$data_dir/member",
+        creates => "${data_dir}/member",
         require => File[$data_dir],
         before  => Systemd::Unit_file['etcd.service'],
       }
     }
-
   } else {
-
-    file { "$etcd::bin_dir/etcd":
-      ensure => absent,
-    }
-    file { "$etcd::conf_dir/etcd.conf":
-      ensure => absent,
-    }
-    file { $data_dir:
-      ensure => absent,
-      force  => true,
-    }
     systemd::unit_file { 'etcd.service':
       ensure => absent,
+      enable => false,
+      active => false,
     }
+    -> [
+      file { "${etcd::bin_dir}/etcd":
+        ensure => absent,
+      },
+      file { "${etcd::conf_dir}/etcd.conf":
+        ensure => absent,
+      },
+      file { $data_dir:
+        ensure => absent,
+        force  => true,
+      },
+    ]
 
+    ['CACERT', 'CERT', 'KEY', 'ENDPOINTS'].each |$variable| {
+      file_line { "etcd-env-${downcase($variable)}":
+        ensure            => absent,
+        path              => '/root/.bashrc',
+        match             => "^export ETCDCTL_${variable}=",
+        match_for_absence => true,
+      }
+    }
   }
-
 }

@@ -5,7 +5,6 @@ define etcd::cert (
   Array[String] $subject_alternate_names_dns = [],
   Array[String] $subject_alternate_names_ip  = [],
 ) {
-
   include etcd
   include etcd::ca
 
@@ -14,9 +13,9 @@ define etcd::cert (
     bits      => '2048',
     require   => File[$etcd::conf_dir],
   }
-  -> openssl::csr { "$etcd::ca::dir/$name.csr":
+  -> openssl::csr { "${etcd::ca::dir}/${name}.csr":
     common_name                 => $facts[networking][fqdn],
-    config                      => "$etcd::ca::dir/$name-csr.cnf",
+    config                      => "${etcd::ca::dir}/${name}-csr.cnf",
     key_file                    => $key_file,
     subject_alternate_names_dns => $subject_alternate_names_dns,
     subject_alternate_names_ip  => $subject_alternate_names_ip,
@@ -25,8 +24,8 @@ define etcd::cert (
     require                     => File[$etcd::ca::dir],
   }
   -> openssl_signcsr { $cert_file:
-    csr        => "$etcd::ca::dir/$name.csr",
-    extfile    => "$etcd::ca::dir/$name-csr.cnf",
+    csr        => "${etcd::ca::dir}/${name}.csr",
+    extfile    => "${etcd::ca::dir}/${name}-csr.cnf",
     extensions => 'ca_ext',
     days       => 365 * 50,
     ca_name    => $etcd::ca::ca_name,
@@ -46,5 +45,4 @@ define etcd::cert (
     group  => $etcd::group,
     mode   => '0644',
   }
-
 }

@@ -1,117 +1,86 @@
 # etcd
 
-Welcome to your new module. A short overview of the generated parts can be found
-in the [PDK documentation][1].
-
-The README template below provides a starting point with details about what
-information to include in your README.
-
-## Table of Contents
-
-1. [Description](#description)
-1. [Setup - The basics of getting started with etcd](#setup)
-    * [What etcd affects](#what-etcd-affects)
-    * [Setup requirements](#setup-requirements)
-    * [Beginning with etcd](#beginning-with-etcd)
-1. [Usage - Configuration options and additional functionality](#usage)
-1. [Limitations - OS compatibility, etc.](#limitations)
-1. [Development - Guide for contributing to the module](#development)
+Installs and configures an [etcd](https://etcd.io) cluster secured with TLS, and the `etcdctl` client.
 
 ## Description
 
-Briefly tell users why they might want to use your module. Explain what your
-module does and what kind of problems users can solve with it.
+The module:
 
-This should be a fairly short description helps the user decide if your module
-is what they want.
+* downloads the etcd release tarball for the node's architecture from GitHub and installs the `etcd` and `etcdctl` binaries
+* manages a private CA on each node from a CA certificate and key you supply, and signs a server and a client certificate for the node with [stm/openssl](https://forge.puppet.com/modules/stm/openssl)
+* configures etcd as a systemd service, with peer and client traffic over TLS
+* sets `ETCDCTL_*` environment variables in root's `.bashrc`, so `etcdctl` works without extra flags
+* can add members to an existing cluster
 
-## Setup
-
-### What etcd affects **OPTIONAL**
-
-If it's obvious what your module touches, you can skip this section. For
-example, folks can probably figure out that your mysql_instance module affects
-their MySQL instances.
-
-If there's more that they should know about, though, this is the place to
-mention:
-
-* Files, packages, services, or operations that the module will alter, impact,
-  or execute.
-* Dependencies that your module automatically installs.
-* Warnings or other important notices.
-
-### Setup Requirements **OPTIONAL**
-
-If your module requires anything extra before setting up (pluginsync enabled,
-another module, etc.), mention it here.
-
-If your most recent release breaks compatibility or requires particular steps
-for upgrading, you might want to include an additional "Upgrading" section here.
-
-### Beginning with etcd
-
-The very basic steps needed for a user to get the module up and running. This
-can include setup steps, if necessary, or it can be an example of the most basic
-use of the module.
+[mindhive/k3s](https://github.com/mindhivenz/puppet-k3s) uses it as the k3s datastore.
 
 ## Usage
 
-Include usage examples for common use cases in the **Usage** section. Show your
-users how to use your module to solve problems, and be sure to include code
-examples. Include three to five examples of the most important or common tasks a
-user can accomplish with your module. Show users how to accomplish more complex
-tasks that involve different types, classes, and functions working in tandem.
+Declare `etcd` and `etcd::ca` (in Hiera or as resource-like classes), then `etcd::server` on cluster members and `etcd::client` on nodes that only need `etcdctl`:
 
-## Reference
-
-This section is deprecated. Instead, add reference information to your code as
-Puppet Strings comments, and then use Strings to generate a REFERENCE.md in your
-module. For details on how to add code comments and generate documentation with
-Strings, see the [Puppet Strings documentation][2] and [style guide][3].
-
-If you aren't ready to use Strings yet, manually create a REFERENCE.md in the
-root of your module directory and list out each of your module's classes,
-defined types, facts, functions, Puppet tasks, task plans, and resource types
-and providers, along with the parameters for each.
-
-For each element (class, defined type, function, and so on), list:
-
-* The data type, if applicable.
-* A description of what the element does.
-* Valid values, if the data type doesn't make it obvious.
-* Default value, if any.
-
-For example:
-
+```puppet
+class { 'etcd':
+  version                  => '3.5.0',
+  initial_member_hostnames => ['node0', 'node1', 'node2'],
+}
+class { 'etcd::ca':
+  ca_cert_content   => $ca_cert,
+  ca_key_content    => $ca_key,
+  ca_key_passphrase => $ca_key_passphrase,
+}
+class { 'etcd::server':
+  token => 'some-cluster-token',
+}
 ```
-### `pet::cat`
 
-#### Parameters
+### Adding members
 
-##### `meow`
+`initial_member_hostnames` only takes effect when the cluster is first created. To add a node later, list it in `added_member_hostnames`. The new node then joins with `etcdctl member add`. Remove any departed members by hand before adding.
 
-Enables vocalization in your cat. Valid options: 'string'.
+### Upgrading
 
-Default: 'medium-loud'.
-```
+With `ensure => present`, the installed binaries and `etcd.conf` are left as they are once they exist. Set `ensure => latest` on `etcd::server` or `etcd::client` to replace them after changing `version` or other settings.
+
+### Removing
+
+`ensure => absent` on `etcd::server` stops and disables the service, then removes the binary, configuration, unit file and data directory, and the `ETCDCTL_*` lines in root's `.bashrc`. On `etcd::client` it removes `etcdctl`.
 
 ## Limitations
 
-In the Limitations section, list any incompatibilities, known issues, or other
-warnings.
+Supports Ubuntu 20.04, 22.04 and 24.04 on amd64 and arm64, with Puppet 7 and 8. CI tests OpenVox 8 only.
 
 ## Development
 
-In the Development section, tell other users the ground rules for contributing
-to your project and how they should submit their work.
+The module is managed with [jig](https://github.com/voxpupuli/jig). Validation and unit tests run inside the [VoxBox](https://github.com/voxpupuli/container-voxbox) container, so the only host requirements are jig and Docker (or Podman).
 
-## Release Notes/Contributors/Etc. **Optional**
+### Setup
 
-If you aren't using changelog, put your release notes here (though you should
-consider using changelog). You can also add any additional sections you feel are
-necessary or important to include here. Please use the `##` header.
+Install jig from its [releases](https://github.com/voxpupuli/jig/releases), then point its runner at the same VoxBox image CI uses (see `VOXBOX_IMAGE` in `.github/workflows/ci.yml`):
 
-[1]: https://puppet.com/docs/pdk/latest/pdk_generating_modules.html
-[2]: https://puppet.com/docs/puppet/latest/puppet_strings.html
-[3]: https://puppet.com/docs/puppet/latest/puppet_strings_style.html
+```shell
+export JIG_RUNNER_TYPE=voxbox
+export JIG_RUNNER_IMAGE=ghcr.io/voxpupuli/voxbox:10.1.0-openvox8.30.0@sha256:01bb8ce5e24d5b111934660f75e2786b4d7c7adcaa7518a564856d1d3041d10d
+```
+
+To make this permanent, put the equivalent `[runner]` section in your jig config file instead (see the [jig voxbox docs](https://github.com/voxpupuli/jig/blob/main/docs/voxbox.md)).
+
+### Validate and test
+
+```shell
+jig validate     # syntax, puppet-lint and rubocop
+jig test unit    # rspec-puppet unit tests
+```
+
+Run a single spec file by calling the container directly:
+
+```shell
+docker run --rm -v "$PWD:/repo" -e SPEC=spec/classes/server_spec.rb "$JIG_RUNNER_IMAGE" spec
+```
+
+### Build
+
+```shell
+jig build
+```
+
+The package is written to `pkg/`. Which files are packaged is controlled by the `[build]` section of `jig.toml`.

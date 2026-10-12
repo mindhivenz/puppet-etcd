@@ -1,4 +1,5 @@
 <%- |
+String $user,
 String $exe_file,
 String $conf_file,
 | -%>
@@ -9,7 +10,7 @@ After=network-online.target time-sync.target
 Wants=network-online.target time-sync.target
 
 [Service]
-User=etcd
+User=<%= $user %>
 Type=notify
 EnvironmentFile=<%= $conf_file %>
 ExecStart=<%= $exe_file %>

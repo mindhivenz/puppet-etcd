@@ -1,9 +1,10 @@
-# This file can be used to install module dependencies for unit testing
-# See https://github.com/puppetlabs/puppetlabs_spec_helper#using-fixtures for details
+# Versions mirror the production control repos (e.g. tannery-control Puppetfile)
 ---
 fixtures:
   forge_modules:
-    openssl: "stm/openssl"
-    archive: "puppet/archive"
-    stdlib: "puppetlabs/stdlib"
-    systemd: "puppet/systemd"
+    archive: { repo: "puppet/archive", ref: "7.1.0" }
+    concat: { repo: "puppetlabs/concat", ref: "9.1.0" }
+    inifile: { repo: "puppetlabs/inifile", ref: "6.2.0" }
+    openssl: { repo: "stm/openssl", ref: "4.3.0" }
+    stdlib: { repo: "puppetlabs/stdlib", ref: "9.7.0" }
+    systemd: { repo: "puppet/systemd", ref: "8.2.0" }
